@@ -1,0 +1,19 @@
+<mat-toolbar class="barra">
+  <mat-icon>inventory_2</mat-icon>
+  <span class="titulo">Controle de Estoque</span>
+  <span class="espaco"></span>
+  <nav>
+    <a mat-button routerLink="/produtos" routerLinkActive="ativo">
+      <mat-icon>list</mat-icon>
+      Produtos
+    </a>
+    <a mat-button routerLink="/consulta" routerLinkActive="ativo">
+      <mat-icon>search</mat-icon>
+      Consultar reserva/bloqueio
+    </a>
+  </nav>
+</mat-toolbar>
+
+<main class="conteudo">
+  <router-outlet />
+</main>
