@@ -29,15 +29,12 @@ class Base(DeclarativeBase):
 
 
 class ProdutoModel(Base):
-    """`version` é incrementada pelo repositório a cada gravação (ver `RepositorioSqlAlchemy.salvar`)."""
-
     __tablename__ = "produtos"
     __table_args__ = (CheckConstraint("total >= 0", name="ck_produtos_total_nao_negativo"),)
 
     id: Mapped[str] = mapped_column(String(4), primary_key=True)
     nome: Mapped[str] = mapped_column(String(200))
     total: Mapped[int]
-    version: Mapped[int] = mapped_column()
 
     reservas: Mapped[list["ReservaModel"]] = relationship(
         back_populates="produto", cascade="all, delete-orphan", lazy="selectin", order_by="ReservaModel.criado_em"
@@ -45,8 +42,6 @@ class ProdutoModel(Base):
     bloqueios: Mapped[list["BloqueioModel"]] = relationship(
         back_populates="produto", cascade="all, delete-orphan", lazy="selectin", order_by="BloqueioModel.criado_em"
     )
-
-    __mapper_args__ = {"version_id_col": version, "version_id_generator": False}
 
 
 class ReservaModel(Base):

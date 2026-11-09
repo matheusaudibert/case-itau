@@ -2,9 +2,7 @@ from types import TracebackType
 from typing import Self
 
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.orm.exc import StaleDataError
 
-from estoque.application.ports import ConflitoDeVersao
 from estoque.infra.repository import RepositorioSqlAlchemy
 
 
@@ -34,10 +32,7 @@ class SqlAlchemyUnitOfWork:
             self.sessao.close()
 
     def commit(self) -> None:
-        try:
-            self.sessao.commit()
-        except StaleDataError as erro:
-            raise ConflitoDeVersao() from erro
+        self.sessao.commit()
 
     def rollback(self) -> None:
         self.sessao.rollback()

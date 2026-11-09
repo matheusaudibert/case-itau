@@ -3,11 +3,10 @@ from uuid import uuid4
 
 import pytest
 
-from estoque.application.services import MAX_TENTATIVAS, ServicoEstoque
+from estoque.application.services import ServicoEstoque
 from estoque.domain.exceptions import (
     BloqueioJaLiberado,
     BloqueioNaoEncontrado,
-    ConflitoDeConcorrencia,
     EstoqueInsuficiente,
     IdProdutoInvalido,
     ProdutoJaExiste,
@@ -261,77 +260,3 @@ def test_falha_no_meio_da_operacao_nao_deixa_alteracao_parcial(
         servico.reservar("P001", 101, "Reserva X")
 
     assert persistido(banco).reservas == []
-
-
-# --- retry de concorrência ------------------------------------------------
-
-
-def test_conflito_de_versao_e_repetido_ate_dar_certo(servico: ServicoEstoque, banco: BancoEmMemoria) -> None:
-    banco.conflitos_pendentes = MAX_TENTATIVAS - 1
-
-    reserva = servico.reservar("P001", 10, "Reserva 001")
-
-    assert banco.transacoes == MAX_TENTATIVAS
-    assert (banco.commits, banco.rollbacks) == (1, MAX_TENTATIVAS - 1)
-    assert [r.id for r in persistido(banco).reservas] == [reserva.id]
-
-
-def test_conflito_de_versao_persistente_levanta_conflito_de_concorrencia_apos_3_tentativas(
-    servico: ServicoEstoque, banco: BancoEmMemoria
-) -> None:
-    banco.conflitos_pendentes = MAX_TENTATIVAS
-
-    with pytest.raises(ConflitoDeConcorrencia):
-        servico.reservar("P001", 10, "Reserva 001")
-
-    assert MAX_TENTATIVAS == 3
-    assert banco.transacoes == 3
-    assert (banco.commits, banco.rollbacks) == (0, 3)
-    assert saldos(persistido(banco)) == (100, 100, 0, 0)
-
-
-def preparar_operacao_com_retry(servico: ServicoEstoque, operacao: str) -> Callable[[], object]:
-    """Cria o que a operação precisa (reserva/bloqueio) e devolve a chamada a ser testada."""
-    match operacao:
-        case "liberar_reserva":
-            reserva = servico.reservar("P001", 1, "Reserva X")
-            return lambda: servico.liberar_reserva(reserva.id)
-        case "liberar_bloqueio":
-            bloqueio = servico.bloquear("P001", 1)
-            return lambda: servico.liberar_bloqueio(bloqueio.id)
-        case _:
-            return lambda: OPERACOES_DE_ESCRITA[operacao](servico)
-
-
-@pytest.mark.parametrize(
-    "operacao", ["entrada", "saida", "reservar", "bloquear", "liberar_reserva", "liberar_bloqueio"]
-)
-def test_todas_as_operacoes_que_alteram_o_produto_tem_retry(
-    servico: ServicoEstoque, banco: BancoEmMemoria, operacao: str
-) -> None:
-    executar = preparar_operacao_com_retry(servico, operacao)
-    transacoes_do_preparo = banco.transacoes
-    banco.conflitos_pendentes = 1
-
-    executar()
-
-    assert banco.transacoes - transacoes_do_preparo == 2
-    assert banco.rollbacks == 1
-
-
-def test_retry_reavalia_a_regra_com_o_estado_atual(servico: ServicoEstoque, banco: BancoEmMemoria) -> None:
-    """Outra transação consome o estoque antes do commit; a nova tentativa vê isso e falha."""
-    banco.escrita_concorrente = lambda b: b.produtos["P001"].reservar(95, "Reserva CONCORRENTE")
-
-    with pytest.raises(EstoqueInsuficiente):
-        servico.reservar("P001", 10, "Reserva 001")
-
-    assert banco.transacoes == 2
-    assert saldos(persistido(banco)) == (100, 5, 95, 0)
-
-
-def test_erro_de_dominio_nao_e_repetido(servico: ServicoEstoque, banco: BancoEmMemoria) -> None:
-    with pytest.raises(EstoqueInsuficiente):
-        servico.saida("P001", 101)
-
-    assert banco.transacoes == 1

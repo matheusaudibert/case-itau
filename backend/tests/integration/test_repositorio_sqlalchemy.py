@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy import Engine, text
 from sqlalchemy.exc import IntegrityError
 
-from estoque.application.ports import ConflitoDeVersao
 from estoque.domain.exceptions import ProdutoJaExiste
 from estoque.domain.produto import Produto, Status
 from estoque.infra.uow import SqlAlchemyUnitOfWork
@@ -17,11 +16,6 @@ def criar(nova_uow: NovaUow, produto: Produto) -> None:
     with nova_uow() as uow:
         uow.produtos.adicionar(produto)
         uow.commit()
-
-
-def versao(engine: Engine, produto_id: str = "P001") -> int:
-    with engine.connect() as conexao:
-        return conexao.execute(text("SELECT version FROM produtos WHERE id = :id"), {"id": produto_id}).scalar_one()
 
 
 @pytest.fixture
@@ -137,85 +131,9 @@ def test_sem_commit_nada_e_gravado(nova_uow: NovaUow, produto_salvo: Produto) ->
     assert carregado is not None and carregado.total == 100
 
 
-def test_segunda_sessao_a_salvar_recebe_conflito_de_versao(
-    nova_uow: NovaUow, produto_salvo: Produto, engine: Engine
-) -> None:
-    primeira, segunda = nova_uow(), nova_uow()
-    with primeira, segunda:
-        produto_1 = primeira.produtos.obter("P001")
-        produto_2 = segunda.produtos.obter("P001")
-        assert produto_1 is not None and produto_2 is not None
-
-        produto_1.reservar(70, "Reserva A")
-        primeira.produtos.salvar(produto_1)
-        primeira.commit()
-
-        produto_2.reservar(70, "Reserva B")
-        segunda.produtos.salvar(produto_2)
-        with pytest.raises(ConflitoDeVersao):
-            segunda.commit()
-        segunda.rollback()
-
-    with nova_uow() as uow:
-        carregado = uow.produtos.obter("P001")
-    assert carregado is not None
-    motivos = {r.motivo for r in carregado.reservas}
-    assert "Reserva A" in motivos and "Reserva B" not in motivos
-    assert saldos(carregado) == (100, 7, 85, 8)
-
-
-def test_conflito_detectado_mesmo_quando_so_reservas_mudam(nova_uow: NovaUow, produto_salvo: Produto) -> None:
-    """Sem tocar em total/nome: a única alteração na linha do produto é a versão."""
-    reserva_id = produto_salvo.reservas[0].id
-    primeira, segunda = nova_uow(), nova_uow()
-    with primeira, segunda:
-        produto_1 = primeira.produtos.obter("P001")
-        produto_2 = segunda.produtos.obter("P001")
-        assert produto_1 is not None and produto_2 is not None
-
-        produto_1.liberar_reserva(reserva_id)
-        primeira.produtos.salvar(produto_1)
-        primeira.commit()
-
-        produto_2.bloquear(1)
-        segunda.produtos.salvar(produto_2)
-        with pytest.raises(ConflitoDeVersao):
-            segunda.commit()
-        segunda.rollback()
-
-
-def test_salvar_produto_nao_carregado_na_transacao_levanta_erro(nova_uow: NovaUow, produto_salvo: Produto) -> None:
+def test_salvar_produto_que_nao_esta_no_banco_levanta_erro(nova_uow: NovaUow) -> None:
     with pytest.raises(LookupError), nova_uow() as uow:
-        uow.produtos.salvar(produto_salvo)
-
-
-def test_versao_comeca_em_1_e_incrementa_a_cada_gravacao(nova_uow: NovaUow, engine: Engine) -> None:
-    criar(nova_uow, Produto("P001", "Teclado"))
-    assert versao(engine) == 1
-
-    with nova_uow() as uow:
-        produto = uow.produtos.obter("P001")
-        assert produto is not None
-        produto.entrada(10)
-        uow.produtos.salvar(produto)
-        uow.commit()
-
-    assert versao(engine) == 2
-
-
-def test_liberar_reserva_incrementa_a_versao_do_produto(
-    nova_uow: NovaUow, produto_salvo: Produto, engine: Engine
-) -> None:
-    versao_antes = versao(engine)
-
-    with nova_uow() as uow:
-        produto = uow.produtos.obter("P001")
-        assert produto is not None
-        produto.liberar_reserva(produto_salvo.reservas[0].id)
-        uow.produtos.salvar(produto)
-        uow.commit()
-
-    assert versao(engine) == versao_antes + 1
+        uow.produtos.salvar(Produto("P999", "Nunca adicionado"))
 
 
 def test_adicionar_produto_existente_levanta_produto_ja_existe(nova_uow: NovaUow, produto_salvo: Produto) -> None:

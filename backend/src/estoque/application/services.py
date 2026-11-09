@@ -1,17 +1,14 @@
 from collections.abc import Callable
 from uuid import UUID
 
-from estoque.application.ports import ConflitoDeVersao, UnitOfWork
+from estoque.application.ports import UnitOfWork
 from estoque.domain.exceptions import (
     BloqueioNaoEncontrado,
-    ConflitoDeConcorrencia,
     ProdutoJaExiste,
     ProdutoNaoEncontrado,
     ReservaNaoEncontrada,
 )
 from estoque.domain.produto import Bloqueio, Produto, Reserva, Status
-
-MAX_TENTATIVAS = 3
 
 
 class ServicoEstoque:
@@ -38,60 +35,54 @@ class ServicoEstoque:
             return carregar_produto(uow, produto_id)
 
     def entrada(self, produto_id: str, quantidade: int) -> Produto:
-        def operacao(uow: UnitOfWork) -> Produto:
+        with self.uow_factory() as uow:
             produto = carregar_produto(uow, produto_id)
             produto.entrada(quantidade)
             uow.produtos.salvar(produto)
+            uow.commit()
             return produto
 
-        return self.executar_com_retry(operacao)
-
     def saida(self, produto_id: str, quantidade: int) -> Produto:
-        def operacao(uow: UnitOfWork) -> Produto:
+        with self.uow_factory() as uow:
             produto = carregar_produto(uow, produto_id)
             produto.saida(quantidade)
             uow.produtos.salvar(produto)
+            uow.commit()
             return produto
 
-        return self.executar_com_retry(operacao)
-
     def reservar(self, produto_id: str, quantidade: int, motivo: str | None = None) -> Reserva:
-        def operacao(uow: UnitOfWork) -> Reserva:
+        with self.uow_factory() as uow:
             produto = carregar_produto(uow, produto_id)
             reserva = produto.reservar(quantidade, motivo)
             uow.produtos.salvar(produto)
+            uow.commit()
             return reserva
 
-        return self.executar_com_retry(operacao)
-
     def bloquear(self, produto_id: str, quantidade: int, motivo: str | None = None) -> Bloqueio:
-        def operacao(uow: UnitOfWork) -> Bloqueio:
+        with self.uow_factory() as uow:
             produto = carregar_produto(uow, produto_id)
             bloqueio = produto.bloquear(quantidade, motivo)
             uow.produtos.salvar(produto)
+            uow.commit()
             return bloqueio
 
-        return self.executar_com_retry(operacao)
-
     def liberar_reserva(self, reserva_id: UUID) -> Reserva:
-        def operacao(uow: UnitOfWork) -> Reserva:
+        with self.uow_factory() as uow:
             reserva = carregar_reserva(uow, reserva_id)
             produto = carregar_produto(uow, reserva.produto_id)
             liberada = produto.liberar_reserva(reserva_id)
             uow.produtos.salvar(produto)
+            uow.commit()
             return liberada
 
-        return self.executar_com_retry(operacao)
-
     def liberar_bloqueio(self, bloqueio_id: UUID) -> Bloqueio:
-        def operacao(uow: UnitOfWork) -> Bloqueio:
+        with self.uow_factory() as uow:
             bloqueio = carregar_bloqueio(uow, bloqueio_id)
             produto = carregar_produto(uow, bloqueio.produto_id)
             liberado = produto.liberar_bloqueio(bloqueio_id)
             uow.produtos.salvar(produto)
+            uow.commit()
             return liberado
-
-        return self.executar_com_retry(operacao)
 
     def consultar_reserva(self, reserva_id: UUID) -> Reserva:
         with self.uow_factory() as uow:
@@ -110,22 +101,6 @@ class ServicoEstoque:
         with self.uow_factory() as uow:
             produto = carregar_produto(uow, produto_id)
             return filtrar_por_status(produto.bloqueios, status)
-
-    def executar_com_retry[T](self, operacao: Callable[[UnitOfWork], T]) -> T:
-        """Roda a operação numa transação nova a cada tentativa.
-
-        Em `ConflitoDeVersao` o produto é recarregado do banco e a regra é
-        reavaliada sobre o estado atual. Erros de domínio não são repetidos.
-        """
-        for tentativa in range(MAX_TENTATIVAS):
-            try:
-                with self.uow_factory() as uow:
-                    resultado = operacao(uow)
-                    uow.commit()
-                    return resultado
-            except ConflitoDeVersao:
-                continue
-        raise ConflitoDeConcorrencia()
 
 
 def carregar_produto(uow: UnitOfWork, produto_id: str) -> Produto:

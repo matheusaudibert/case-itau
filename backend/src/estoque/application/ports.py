@@ -5,14 +5,6 @@ from uuid import UUID
 from estoque.domain.produto import Bloqueio, Produto, Reserva
 
 
-class ConflitoDeVersao(Exception):
-    """Outra transação alterou o produto entre a leitura e o commit.
-
-    A infra traduz o erro de lock otimista do banco para esta exceção;
-    os casos de uso a tratam com nova tentativa.
-    """
-
-
 class RepositorioProdutos(Protocol):
     def obter(self, produto_id: str) -> Produto | None: ...
 
@@ -30,8 +22,7 @@ class RepositorioProdutos(Protocol):
 class UnitOfWork(Protocol):
     """Uma transação. Ao sair do `with` com exceção, faz rollback.
 
-    Sem `commit()` explícito nada é persistido. `commit()` pode levantar
-    `ConflitoDeVersao`.
+    Sem `commit()` explícito nada é persistido.
     """
 
     produtos: RepositorioProdutos

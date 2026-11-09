@@ -59,8 +59,3 @@ class ReservaJaLiberada(ErroDominio):
 class BloqueioJaLiberado(ErroDominio):
     def __init__(self, bloqueio_id: UUID) -> None:
         super().__init__(f"Bloqueio {bloqueio_id} já foi liberado.")
-
-
-class ConflitoDeConcorrencia(ErroDominio):
-    def __init__(self) -> None:
-        super().__init__("O produto foi alterado por outra operação ao mesmo tempo. Tente novamente.")

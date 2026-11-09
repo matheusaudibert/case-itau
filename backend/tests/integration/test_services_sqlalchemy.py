@@ -1,7 +1,6 @@
 from uuid import uuid4
 
 import pytest
-from sqlalchemy import Engine, text
 
 from estoque.application.services import ServicoEstoque
 from estoque.domain.exceptions import (
@@ -74,20 +73,3 @@ def test_liberar_reserva_duas_vezes(servico_com_produto: ServicoEstoque) -> None
 
     with pytest.raises(ReservaJaLiberada):
         servico_com_produto.liberar_reserva(reserva.id)
-
-
-def test_cada_operacao_de_escrita_incrementa_a_versao(servico_com_produto: ServicoEstoque, engine: Engine) -> None:
-    def versao() -> int:
-        with engine.connect() as conexao:
-            return conexao.execute(text("SELECT version FROM produtos WHERE id = 'P001'")).scalar_one()
-
-    servico = servico_com_produto
-    versoes = [versao()]
-    servico.entrada("P001", 10)
-    versoes.append(versao())
-    reserva = servico.reservar("P001", 2, "Reserva 001")
-    versoes.append(versao())
-    servico.liberar_reserva(reserva.id)
-    versoes.append(versao())
-
-    assert versoes == [1, 2, 3, 4]

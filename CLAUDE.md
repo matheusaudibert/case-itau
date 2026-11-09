@@ -71,11 +71,10 @@ Produtos são criados pelo seed ou por `POST /produtos`. Entrada em produto inex
 - Limitação conhecida (documentar no README): o formato comporta no máximo 1000 produtos (`P000` a `P999`).
 - Ids de reservas e bloqueios são UUIDs gerados pelo servidor e devolvidos na resposta de criação.
 
-## Consistência e concorrência
+## Consistência
 
 - Cada caso de uso roda em **uma única transação** via Unit of Work: carrega o agregado → chama o domínio → persiste → commit. Qualquer exceção → rollback.
-- **Lock otimista**: coluna `version` no produto usando `version_id_col` do SQLAlchemy. Toda operação que altera reservas/bloqueios também incrementa a versão do produto.
-- Em conflito de versão (`StaleDataError`): o caso de uso tenta de novo até 3 vezes; persistindo, levanta `ConflitoDeConcorrencia`.
+- **Sem controle de concorrência** (decisão do autor, para manter a solução simples): não há coluna `version`, lock nem retry. Requisições simultâneas no mesmo produto são uma limitação documentada no README.
 - SQLite: habilitar `PRAGMA foreign_keys=ON`.
 
 ## API
@@ -98,7 +97,7 @@ Produtos são criados pelo seed ou por `POST /produtos`. Entrada em produto inex
 | Exceção | HTTP |
 |---|---|
 | `*NaoEncontrado` / `*NaoEncontrada` | 404 |
-| `EstoqueInsuficiente`, `*JaLiberada`/`*JaLiberado`, `ConflitoDeConcorrencia`, `ProdutoJaExiste` | 409 |
+| `EstoqueInsuficiente`, `*JaLiberada`/`*JaLiberado`, `ProdutoJaExiste` | 409 |
 | `QuantidadeInvalida`, `IdProdutoInvalido`, `NomeProdutoInvalido` e validação do Pydantic | 422 |
 
 ## Estrutura

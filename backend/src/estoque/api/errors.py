@@ -12,7 +12,6 @@ from estoque.api.schemas import ErroSaida
 from estoque.domain.exceptions import (
     BloqueioJaLiberado,
     BloqueioNaoEncontrado,
-    ConflitoDeConcorrencia,
     ErroDominio,
     EstoqueInsuficiente,
     IdProdutoInvalido,
@@ -33,7 +32,6 @@ STATUS_POR_ERRO: dict[type[ErroDominio], int] = {
     EstoqueInsuficiente: status.HTTP_409_CONFLICT,
     ReservaJaLiberada: status.HTTP_409_CONFLICT,
     BloqueioJaLiberado: status.HTTP_409_CONFLICT,
-    ConflitoDeConcorrencia: status.HTTP_409_CONFLICT,
     ProdutoJaExiste: status.HTTP_409_CONFLICT,
     QuantidadeInvalida: status.HTTP_422_UNPROCESSABLE_CONTENT,
     IdProdutoInvalido: status.HTTP_422_UNPROCESSABLE_CONTENT,
@@ -50,7 +48,6 @@ EXEMPLO_POR_ERRO: dict[type[ErroDominio], ErroDominio] = {
     EstoqueInsuficiente: EstoqueInsuficiente(solicitado=100, disponivel=77),
     ReservaJaLiberada: ReservaJaLiberada(UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6")),
     BloqueioJaLiberado: BloqueioJaLiberado(UUID("3fa85f64-5717-4562-b3fc-2c963f66afa6")),
-    ConflitoDeConcorrencia: ConflitoDeConcorrencia(),
     ProdutoJaExiste: ProdutoJaExiste("P001"),
     QuantidadeInvalida: QuantidadeInvalida(0),
     IdProdutoInvalido: IdProdutoInvalido("P١٢٣"),

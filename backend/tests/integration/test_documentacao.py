@@ -4,19 +4,13 @@ Para cada rota: todo erro documentado é provocado de verdade e responde com o
 status e o código anunciados, e nenhum erro provocável fica sem documentação.
 """
 
-from collections.abc import Callable, Iterator
 from typing import Any
 from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
 
-from estoque.api.main import criar_app
-from estoque.api.routes import obter_fabrica_uow
-from estoque.application.ports import ConflitoDeVersao
 from estoque.application.services import ServicoEstoque
-from estoque.config import Config
-from estoque.infra.uow import SqlAlchemyUnitOfWork
 
 UUID_INEXISTENTE = str(uuid4())
 
@@ -54,22 +48,6 @@ CASOS_DE_ERRO: list[tuple[str, str, int, str, str, dict[str, Any] | None]] = [
     ("post", "/bloqueios/{bloqueio_id}/liberar", 422, "VALIDACAO", "/bloqueios/abc/liberar", None),
 ]
 
-# Rotas que gravam com retry: provocadas com um Unit of Work cujo commit sempre conflita.
-CASOS_DE_CONFLITO: list[tuple[str, str, str, dict[str, Any] | None]] = [
-    ("post", "/produtos/{produto_id}/entradas", "/produtos/P001/entradas", {"quantidade": 1}),
-    ("post", "/produtos/{produto_id}/saidas", "/produtos/P001/saidas", {"quantidade": 1}),
-    ("post", "/produtos/{produto_id}/reservas", "/produtos/P001/reservas", {"quantidade": 1, "motivo": "Reserva"}),
-    ("post", "/produtos/{produto_id}/bloqueios", "/produtos/P001/bloqueios", {"quantidade": 1}),
-    ("post", "/reservas/{reserva_id}/liberar", "/reservas/{reserva_ativa}/liberar", None),
-    ("post", "/bloqueios/{bloqueio_id}/liberar", "/bloqueios/{bloqueio_ativo}/liberar", None),
-]
-
-
-class UnitOfWorkSempreEmConflito(SqlAlchemyUnitOfWork):
-    def commit(self) -> None:
-        raise ConflitoDeVersao()
-
-
 @pytest.fixture
 def ids(servico: ServicoEstoque) -> dict[str, str]:
     """P001 com estoque, uma reserva e um bloqueio ativos e outros dois já liberados."""
@@ -92,15 +70,6 @@ def openapi(cliente: TestClient) -> dict[str, Any]:
     return cliente.get("/openapi.json").json()
 
 
-@pytest.fixture
-def cliente_em_conflito(database_url: str, fabrica_sessoes: Any) -> Iterator[TestClient]:
-    app = criar_app(Config(database_url=database_url, cors_origins=[], seed_on_startup=False))
-    fabrica: Callable[[], SqlAlchemyUnitOfWork] = lambda: UnitOfWorkSempreEmConflito(fabrica_sessoes)
-    app.dependency_overrides[obter_fabrica_uow] = lambda: fabrica
-    with TestClient(app) as cliente:
-        yield cliente
-
-
 def erros_documentados(openapi: dict[str, Any]) -> set[tuple[str, str, int, str]]:
     documentados = set()
     for rota, operacoes in openapi["paths"].items():
@@ -119,7 +88,6 @@ def erros_documentados(openapi: dict[str, Any]) -> set[tuple[str, str, int, str]
 
 def test_cada_erro_documentado_tem_um_caso_que_o_provoca_e_vice_versa(openapi: dict[str, Any]) -> None:
     provocados = {(m, r, s, c) for m, r, s, c, chamada, corpo in CASOS_DE_ERRO}
-    provocados |= {(m, r, 409, "CONFLITO_DE_CONCORRENCIA") for m, r, chamada, corpo in CASOS_DE_CONFLITO}
 
     assert erros_documentados(openapi) == provocados
 
@@ -152,24 +120,6 @@ def test_erro_documentado_e_o_que_a_api_devolve(
     assert resposta.json()["erro"] == codigo
     exemplo = openapi["paths"][rota_doc][metodo]["responses"][str(status_code)]["content"]["application/json"]
     assert codigo in exemplo["examples"]
-
-
-@pytest.mark.parametrize(("metodo", "rota_doc", "rota", "corpo"), CASOS_DE_CONFLITO, ids=[c[1] for c in CASOS_DE_CONFLITO])
-def test_conflito_de_concorrencia_documentado_e_o_que_a_api_devolve(
-    cliente_em_conflito: TestClient,
-    ids: dict[str, str],
-    metodo: str,
-    rota_doc: str,
-    rota: str,
-    corpo: dict[str, Any] | None,
-) -> None:
-    resposta = cliente_em_conflito.request(metodo, rota.format(**ids), json=corpo)
-
-    assert resposta.status_code == 409
-    assert resposta.json() == {
-        "erro": "CONFLITO_DE_CONCORRENCIA",
-        "mensagem": "O produto foi alterado por outra operação ao mesmo tempo. Tente novamente.",
-    }
 
 
 def test_mensagens_dos_exemplos_sao_as_mesmas_da_api(cliente: TestClient, openapi: dict[str, Any], ids: dict[str, str]) -> None:

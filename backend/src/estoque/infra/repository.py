@@ -8,27 +8,15 @@ from estoque.domain.exceptions import ProdutoJaExiste
 from estoque.domain.produto import Bloqueio, Produto, Reserva
 from estoque.infra.models import BloqueioModel, ProdutoModel, ReservaModel
 
-VERSAO_INICIAL = 1
-
-
 class RepositorioSqlAlchemy:
-    """Converte entre modelos SQLAlchemy e o agregado `Produto`.
-
-    Guarda referência aos modelos carregados: o mapa de identidade da sessão
-    é fraco, e sem isso o modelo seria descartado e `salvar` o leria de novo,
-    perdendo a versão vista na leitura (e com ela a detecção de conflito).
-    """
+    """Converte entre modelos SQLAlchemy e o agregado `Produto`."""
 
     def __init__(self, sessao: Session) -> None:
         self.sessao = sessao
-        self.carregados: dict[str, ProdutoModel] = {}
 
     def obter(self, produto_id: str) -> Produto | None:
-        modelo = self.carregados.get(produto_id) or self.sessao.get(ProdutoModel, produto_id)
-        if modelo is None:
-            return None
-        self.carregados[modelo.id] = modelo
-        return para_produto(modelo)
+        modelo = self.sessao.get(ProdutoModel, produto_id)
+        return para_produto(modelo) if modelo is not None else None
 
     def listar(self) -> list[Produto]:
         modelos = self.sessao.scalars(select(ProdutoModel).order_by(ProdutoModel.id))
@@ -36,29 +24,20 @@ class RepositorioSqlAlchemy:
 
     def adicionar(self, produto: Produto) -> None:
         """Faz flush na hora para que id duplicado vire `ProdutoJaExiste`, inclusive em criações simultâneas."""
-        modelo = ProdutoModel(id=produto.id, nome=produto.nome, total=produto.total, version=VERSAO_INICIAL)
+        modelo = ProdutoModel(id=produto.id, nome=produto.nome, total=produto.total)
         sincronizar_filhos(modelo, produto)
         self.sessao.add(modelo)
-        self.carregados[modelo.id] = modelo
         try:
             self.sessao.flush()
         except IntegrityError as erro:
             raise ProdutoJaExiste(produto.id) from erro
 
     def salvar(self, produto: Produto) -> None:
-        """Grava o agregado e incrementa `version` sempre.
-
-        Como o `version_id_col` só é checado quando a linha de `produtos`
-        sofre UPDATE, incrementar a versão garante esse UPDATE (com
-        `WHERE version = <versão lida>`) mesmo quando só reservas ou
-        bloqueios mudaram.
-        """
-        modelo = self.carregados.get(produto.id)
+        modelo = self.sessao.get(ProdutoModel, produto.id)
         if modelo is None:
-            raise LookupError(f"Produto {produto.id} precisa ser carregado com obter() antes de salvar().")
+            raise LookupError(f"Produto {produto.id} não existe no banco; use adicionar().")
         modelo.nome = produto.nome
         modelo.total = produto.total
-        modelo.version += 1
         sincronizar_filhos(modelo, produto)
 
     def obter_reserva(self, reserva_id: UUID) -> Reserva | None:

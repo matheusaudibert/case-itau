@@ -1,26 +1,16 @@
 import copy
-from collections.abc import Callable
 from types import TracebackType
 from typing import Self
 from uuid import UUID
 
-from estoque.application.ports import ConflitoDeVersao
 from estoque.domain.produto import Bloqueio, Produto, Reserva
 
 
 class BancoEmMemoria:
-    """Estado "persistido", compartilhado entre as unidades de trabalho.
-
-    `conflitos_pendentes` faz os próximos N commits falharem com
-    `ConflitoDeVersao`, simulando outra transação gravando antes.
-    `escrita_concorrente`, se definida, roda uma vez no próximo commit
-    (alterando o banco) e o faz falhar com `ConflitoDeVersao`.
-    """
+    """Estado "persistido", compartilhado entre as unidades de trabalho."""
 
     def __init__(self) -> None:
         self.produtos: dict[str, Produto] = {}
-        self.conflitos_pendentes = 0
-        self.escrita_concorrente: Callable[[BancoEmMemoria], None] | None = None
         self.transacoes = 0
         self.commits = 0
         self.rollbacks = 0
@@ -80,13 +70,6 @@ class UnitOfWorkEmMemoria:
             self.rollback()
 
     def commit(self) -> None:
-        if self.banco.escrita_concorrente is not None:
-            escrita, self.banco.escrita_concorrente = self.banco.escrita_concorrente, None
-            escrita(self.banco)
-            raise ConflitoDeVersao()
-        if self.banco.conflitos_pendentes > 0:
-            self.banco.conflitos_pendentes -= 1
-            raise ConflitoDeVersao()
         self.banco.produtos = copy.deepcopy(self.produtos.produtos)
         self.banco.commits += 1
 

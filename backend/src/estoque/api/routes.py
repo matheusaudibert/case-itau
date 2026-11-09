@@ -19,7 +19,6 @@ from estoque.application.services import ServicoEstoque
 from estoque.domain.exceptions import (
     BloqueioJaLiberado,
     BloqueioNaoEncontrado,
-    ConflitoDeConcorrencia,
     EstoqueInsuficiente,
     IdProdutoInvalido,
     NomeProdutoInvalido,
@@ -68,7 +67,7 @@ def consultar_produto(produto_id: str, servico: Servico) -> ProdutoSaida:
 
 @router.post(
     "/produtos/{produto_id}/entradas", tags=["produtos"],
-    responses=documentar_erros(ProdutoNaoEncontrado, ConflitoDeConcorrencia, validacao="quantidade"),
+    responses=documentar_erros(ProdutoNaoEncontrado, validacao="quantidade"),
 )
 def registrar_entrada(produto_id: str, dados: MovimentacaoCriar, servico: Servico) -> ProdutoSaida:
     return ProdutoSaida.model_validate(servico.entrada(produto_id, dados.quantidade))
@@ -76,7 +75,7 @@ def registrar_entrada(produto_id: str, dados: MovimentacaoCriar, servico: Servic
 
 @router.post(
     "/produtos/{produto_id}/saidas", tags=["produtos"],
-    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, ConflitoDeConcorrencia, validacao="quantidade"),
+    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, validacao="quantidade"),
 )
 def registrar_saida(produto_id: str, dados: MovimentacaoCriar, servico: Servico) -> ProdutoSaida:
     return ProdutoSaida.model_validate(servico.saida(produto_id, dados.quantidade))
@@ -84,7 +83,7 @@ def registrar_saida(produto_id: str, dados: MovimentacaoCriar, servico: Servico)
 
 @router.post(
     "/produtos/{produto_id}/reservas", status_code=status.HTTP_201_CREATED, tags=["reservas"],
-    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, ConflitoDeConcorrencia, validacao="quantidade"),
+    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, validacao="quantidade"),
 )
 def reservar(produto_id: str, dados: ReservaCriar, servico: Servico) -> ReservaSaida:
     return ReservaSaida.model_validate(servico.reservar(produto_id, dados.quantidade, dados.motivo))
@@ -108,7 +107,7 @@ def consultar_reserva(reserva_id: UUID, servico: Servico) -> ReservaSaida:
 
 @router.post(
     "/reservas/{reserva_id}/liberar", tags=["reservas"],
-    responses=documentar_erros(ReservaNaoEncontrada, ReservaJaLiberada, ConflitoDeConcorrencia, validacao="reserva_id"),
+    responses=documentar_erros(ReservaNaoEncontrada, ReservaJaLiberada, validacao="reserva_id"),
 )
 def liberar_reserva(reserva_id: UUID, servico: Servico) -> ReservaSaida:
     return ReservaSaida.model_validate(servico.liberar_reserva(reserva_id))
@@ -116,7 +115,7 @@ def liberar_reserva(reserva_id: UUID, servico: Servico) -> ReservaSaida:
 
 @router.post(
     "/produtos/{produto_id}/bloqueios", status_code=status.HTTP_201_CREATED, tags=["bloqueios"],
-    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, ConflitoDeConcorrencia, validacao="quantidade"),
+    responses=documentar_erros(ProdutoNaoEncontrado, EstoqueInsuficiente, validacao="quantidade"),
 )
 def bloquear(produto_id: str, dados: BloqueioCriar, servico: Servico) -> BloqueioSaida:
     return BloqueioSaida.model_validate(servico.bloquear(produto_id, dados.quantidade, dados.motivo))
@@ -140,7 +139,7 @@ def consultar_bloqueio(bloqueio_id: UUID, servico: Servico) -> BloqueioSaida:
 
 @router.post(
     "/bloqueios/{bloqueio_id}/liberar", tags=["bloqueios"],
-    responses=documentar_erros(BloqueioNaoEncontrado, BloqueioJaLiberado, ConflitoDeConcorrencia, validacao="bloqueio_id"),
+    responses=documentar_erros(BloqueioNaoEncontrado, BloqueioJaLiberado, validacao="bloqueio_id"),
 )
 def liberar_bloqueio(bloqueio_id: UUID, servico: Servico) -> BloqueioSaida:
     return BloqueioSaida.model_validate(servico.liberar_bloqueio(bloqueio_id))

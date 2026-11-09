@@ -386,7 +386,7 @@ def test_toda_excecao_de_dominio_tem_status_http_mapeado() -> None:
 
 def test_codigo_do_erro_em_maiusculas_com_underscore() -> None:
     assert codigo_do_erro(exceptions.EstoqueInsuficiente) == "ESTOQUE_INSUFICIENTE"
-    assert codigo_do_erro(exceptions.ConflitoDeConcorrencia) == "CONFLITO_DE_CONCORRENCIA"
+    assert codigo_do_erro(exceptions.ProdutoNaoEncontrado) == "PRODUTO_NAO_ENCONTRADO"
 
 
 def test_cors_permite_a_origem_configurada(cliente: TestClient) -> None:
