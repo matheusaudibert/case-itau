@@ -1,0 +1,17 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      SEED_ON_STARTUP: "true"
+    volumes:
+      - estoque-data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  estoque-data:
