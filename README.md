@@ -4,6 +4,9 @@ Este repositório contém a solução de um case técnico do processo seletivo p
 
 O case podia ser feito em Java, C# ou Python, e foi escolhido **Python**. O backend é uma API REST feita com **FastAPI**, rodando no servidor **Uvicorn**. Os dados são validados com **Pydantic** e salvos num banco **SQLite**, acessado pelo **SQLAlchemy**. Os testes do backend usam **pytest**. O frontend foi feito em **Angular** com **TypeScript** e **Angular Material**, e os testes dele usam **Vitest**.
 
+Link do projeto: https://case.audibert.dev
+Link do Swagger: https://case.audibert.dev/api/docs
+
 ## Sumário
 
 - [1. Visão geral](#1-visão-geral)
