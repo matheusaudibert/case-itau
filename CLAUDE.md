@@ -17,11 +17,10 @@ O avaliador valoriza: modelagem, correção das regras, consistência, testes, t
 - **Testes**: apenas pytest (o `httpx` entra só como dependência do `TestClient` do FastAPI)
 - Não usar Hypothesis, ruff, mypy, black, flake8 ou outras ferramentas além das listadas
 - **Frontend**: Angular (standalone components, HttpClient), sem NgRx
-- **Docker**: só no final do projeto (Dockerfile por app + docker-compose). Não criar antes de ser pedido.
 
 ## Arquitetura
 
-Monólito modular em camadas (Clean/Hexagonal leve). **Regra de dependência: tudo aponta para o domínio; o domínio não importa nada externo.**
+Monólito modular em camadas. **Regra de dependência: tudo aponta para o domínio; o domínio não importa nada externo.**
 
 ```
 api/  →  application/  →  domain/
@@ -171,7 +170,7 @@ npm start                                      # http://localhost:4200
 
 ## Forma de trabalho
 
-- Trabalhar em **passos pequenos**, nesta ordem: domínio + testes unitários → casos de uso → infra → API + testes de integração → testes de invariantes → seed → frontend → Docker → README.
+- Trabalhar em **passos pequenos**, nesta ordem: domínio + testes unitários → casos de uso → infra → API + testes de integração → testes de invariantes → seed → frontend → README.
 - Ao fim de cada passo: rodar `pytest` e só seguir com todos os testes passando.
 - Não implementar etapas futuras antecipadamente.
 - Ao tomar uma decisão não coberta aqui, registrá-la em `docs/decisoes.md` com o motivo.

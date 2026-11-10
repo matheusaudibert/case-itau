@@ -17,3 +17,6 @@ frontend/.angular/
 .vscode/
 .idea/
 .DS_Store
+
+# PDFs
+*.pdf
