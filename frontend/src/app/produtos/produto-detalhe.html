@@ -1,0 +1,128 @@
+<a mat-button routerLink="/produtos" class="voltar">
+  <mat-icon>arrow_back</mat-icon>
+  Produtos
+</a>
+
+@if (carregando() && !produto()) {
+  <mat-progress-bar mode="indeterminate" />
+}
+
+@if (naoEncontrado()) {
+  <mat-card appearance="outlined" class="aviso">
+    <mat-card-content>Produto {{ produtoId() }} não encontrado.</mat-card-content>
+  </mat-card>
+}
+
+@if (produto(); as p) {
+  <div class="cabecalho">
+    <h1>
+      <span class="id">{{ p.id }}</span>
+      {{ p.nome }}
+    </h1>
+    <button mat-stroked-button (click)="carregarTudo()" [disabled]="carregando()">
+      <mat-icon>refresh</mat-icon>
+      Atualizar
+    </button>
+  </div>
+
+  <div class="saldos">
+    <mat-card appearance="outlined" class="saldo">
+      <span class="rotulo">Total</span>
+      <span class="valor">{{ p.total }}</span>
+    </mat-card>
+    <mat-card appearance="outlined" class="saldo principal">
+      <span class="rotulo">Disponível</span>
+      <span class="valor">{{ p.disponivel }}</span>
+    </mat-card>
+    <mat-card appearance="outlined" class="saldo">
+      <span class="rotulo">Reservado</span>
+      <span class="valor">{{ p.reservado }}</span>
+    </mat-card>
+    <mat-card appearance="outlined" class="saldo">
+      <span class="rotulo">Bloqueado</span>
+      <span class="valor">{{ p.bloqueado }}</span>
+    </mat-card>
+  </div>
+
+  <mat-card appearance="outlined" class="movimentar">
+    <mat-card-header>
+      <mat-card-title>Movimentar estoque</mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-button-toggle-group
+        [value]="operacao()"
+        (change)="operacao.set($event.value)"
+        aria-label="Operação"
+      >
+        <mat-button-toggle value="entrada"><mat-icon>add</mat-icon> Entrada</mat-button-toggle>
+        <mat-button-toggle value="saida"><mat-icon>remove</mat-icon> Saída</mat-button-toggle>
+        <mat-button-toggle value="reservar"><mat-icon>bookmark</mat-icon> Reservar</mat-button-toggle>
+        <mat-button-toggle value="bloquear"><mat-icon>block</mat-icon> Bloquear</mat-button-toggle>
+      </mat-button-toggle-group>
+
+      <form [formGroup]="form" (ngSubmit)="enviar()" class="campos">
+        <mat-form-field appearance="outline">
+          <mat-label>Quantidade</mat-label>
+          <input matInput type="number" formControlName="quantidade" />
+        </mat-form-field>
+
+        @if (operacao() === 'reservar' || operacao() === 'bloquear') {
+          <mat-form-field appearance="outline">
+            <mat-label>Motivo (opcional)</mat-label>
+            <input
+              matInput
+              formControlName="motivo"
+              [placeholder]="operacao() === 'reservar' ? 'Reserva para Matheus' : 'Avaria'"
+            />
+          </mat-form-field>
+        }
+
+        <button mat-flat-button type="submit" [disabled]="!podeEnviar()">Confirmar</button>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <mat-card appearance="outlined">
+    <mat-tab-group>
+      <mat-tab [label]="'Reservas (' + reservas().length + ')'">
+        <div class="filtro">
+          <mat-button-toggle-group
+            [value]="filtroReservas()"
+            (change)="filtrarReservas($event.value)"
+            aria-label="Filtrar reservas por status"
+          >
+            <mat-button-toggle value="TODOS">Todas</mat-button-toggle>
+            <mat-button-toggle value="ATIVO">Ativas</mat-button-toggle>
+            <mat-button-toggle value="LIBERADO">Liberadas</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+        <app-tabela-registros
+          [registros]="reservas()"
+          mensagemVazia="Nenhuma reserva."
+          [desabilitado]="enviando()"
+          (liberar)="liberarReserva($event)"
+        />
+      </mat-tab>
+
+      <mat-tab [label]="'Bloqueios (' + bloqueios().length + ')'">
+        <div class="filtro">
+          <mat-button-toggle-group
+            [value]="filtroBloqueios()"
+            (change)="filtrarBloqueios($event.value)"
+            aria-label="Filtrar bloqueios por status"
+          >
+            <mat-button-toggle value="TODOS">Todos</mat-button-toggle>
+            <mat-button-toggle value="ATIVO">Ativos</mat-button-toggle>
+            <mat-button-toggle value="LIBERADO">Liberados</mat-button-toggle>
+          </mat-button-toggle-group>
+        </div>
+        <app-tabela-registros
+          [registros]="bloqueios()"
+          mensagemVazia="Nenhum bloqueio."
+          [desabilitado]="enviando()"
+          (liberar)="liberarBloqueio($event)"
+        />
+      </mat-tab>
+    </mat-tab-group>
+  </mat-card>
+}

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# SQLite
+backend/data/*
+!backend/data/.gitkeep
+
+# Node / Angular
+node_modules/
+frontend/dist/
+frontend/.angular/
+
+# IDE / SO
+.vscode/
+.idea/
+.DS_Store
+
+# PDFs
+*.pdf

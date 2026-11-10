@@ -1,0 +1,69 @@
+<h1>Consultar reserva ou bloqueio</h1>
+
+<mat-card appearance="outlined">
+  <mat-card-content>
+    <mat-button-toggle-group
+      [value]="tipo()"
+      (change)="trocarTipo($event.value)"
+      aria-label="Tipo de registro"
+    >
+      <mat-button-toggle value="reserva">Reserva</mat-button-toggle>
+      <mat-button-toggle value="bloqueio">Bloqueio</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <form [formGroup]="form" (ngSubmit)="consultar()" class="busca">
+      <mat-form-field appearance="outline">
+        <mat-label>Id {{ tipo() === 'reserva' ? 'da reserva' : 'do bloqueio' }}</mat-label>
+        <input
+          matInput
+          formControlName="id"
+          placeholder="3fa85f64-5717-4562-b3fc-2c963f66afa6"
+          autocomplete="off"
+        />
+      </mat-form-field>
+      <button mat-flat-button type="submit" [disabled]="form.invalid || enviando()">
+        <mat-icon>search</mat-icon>
+        Consultar
+      </button>
+    </form>
+  </mat-card-content>
+</mat-card>
+
+@if (resultado(); as r) {
+  <mat-card appearance="outlined" class="resultado">
+    <mat-card-header>
+      <mat-card-title>{{ r.tipo === 'reserva' ? 'Reserva' : 'Bloqueio' }}</mat-card-title>
+      <mat-card-subtitle><code>{{ r.registro.id }}</code></mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <dl>
+        <dt>Produto</dt>
+        <dd>
+          <a [routerLink]="['/produtos', r.registro.produto_id]">{{ r.registro.produto_id }}</a>
+        </dd>
+        <dt>Quantidade</dt>
+        <dd>{{ r.registro.quantidade }}</dd>
+        <dt>Motivo</dt>
+        <dd>{{ r.registro.motivo || '—' }}</dd>
+        <dt>Status</dt>
+        <dd>
+          <span class="status" [class.ativo]="r.registro.status === 'ATIVO'">{{ r.registro.status }}</span>
+        </dd>
+        <dt>Criado em</dt>
+        <dd>{{ r.registro.criado_em | date: 'dd/MM/yyyy HH:mm:ss' }}</dd>
+        <dt>Liberado em</dt>
+        <dd>
+          {{ r.registro.liberado_em ? (r.registro.liberado_em | date: 'dd/MM/yyyy HH:mm:ss') : '—' }}
+        </dd>
+      </dl>
+    </mat-card-content>
+    @if (r.registro.status === 'ATIVO') {
+      <mat-card-actions align="end">
+        <button mat-flat-button (click)="liberar()" [disabled]="enviando()">
+          <mat-icon>lock_open</mat-icon>
+          Liberar
+        </button>
+      </mat-card-actions>
+    }
+  </mat-card>
+}

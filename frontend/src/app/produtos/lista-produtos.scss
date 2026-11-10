@@ -1,0 +1,45 @@
+.cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+}
+
+.acoes {
+  display: flex;
+  gap: 8px;
+}
+
+table {
+  width: 100%;
+}
+
+.linha {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+.numero {
+  text-align: right;
+}
+
+.destaque {
+  font-weight: 500;
+  color: var(--mat-sys-primary);
+}
+
+.vazio {
+  padding: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+}

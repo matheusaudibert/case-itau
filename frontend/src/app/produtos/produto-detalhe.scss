@@ -1,0 +1,79 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.voltar {
+  align-self: flex-start;
+}
+
+.cabecalho {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  h1 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  .id {
+    color: var(--mat-sys-primary);
+    margin-right: 8px;
+  }
+}
+
+.saldos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.saldo {
+  padding: 16px;
+
+  .rotulo {
+    font: var(--mat-sys-label-large);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .valor {
+    font: var(--mat-sys-display-small);
+  }
+
+  &.principal {
+    background-color: var(--mat-sys-primary-container);
+    color: var(--mat-sys-on-primary-container);
+
+    .rotulo {
+      color: inherit;
+    }
+  }
+}
+
+.movimentar mat-button-toggle-group {
+  margin: 8px 0 16px;
+  flex-wrap: wrap;
+}
+
+.campos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+
+  mat-form-field {
+    width: 220px;
+  }
+}
+
+.filtro {
+  padding: 16px 16px 8px;
+}
+
+.aviso {
+  color: var(--mat-sys-error);
+}
